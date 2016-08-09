@@ -8,6 +8,10 @@
 
 #import <Foundation/Foundation.h>
 #import "GWLBrotliArchive.h"
+#include <sys/stat.h>
+#import "decode.h"
+
+static const size_t kFileBufferSize = 65536;
 
 @implementation GWLBrotliArchive
 
@@ -75,7 +79,76 @@
              progressHandler:(void (^)(NSString *entry, brotli_file_info fileInfo, long entryNumber, long total))progressHandler
            completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
 {
-    return YES;
+    uint8_t *input;
+    uint8_t *output;
+    size_t total_out;
+    size_t available_in = 0;
+    const uint8_t *next_in;
+    size_t available_out = kFileBufferSize;
+    uint8_t *next_out;
+
+    NSInputStream *inputStream = [NSInputStream inputStreamWithFileAtPath:path];
+    NSOutputStream *outputStream = [NSOutputStream outputStreamToFileAtPath:destination append:NO];
+    
+    BrotliResult result = BROTLI_RESULT_ERROR;
+    BrotliState *s = BrotliCreateState(NULL, NULL, NULL);
+    if (!s) {
+        NSLog(@"[GWLBrotliArchive] out of memory");
+        return NO;
+    }
+    
+    input = (uint8_t *)malloc(kFileBufferSize);
+    output = (uint8_t *)malloc(kFileBufferSize);
+    if (!input || !output) {
+        NSLog(@"[GWLBrotliArchive] out of memory");
+        goto end;
+    }
+    
+    next_out = output;
+    result = BROTLI_RESULT_NEEDS_MORE_INPUT;
+    while (YES) {
+        if (result == BROTLI_RESULT_NEEDS_MORE_INPUT) {
+            if (available_in == 0) {
+                break;
+            }
+            NSInteger read_bytes = [inputStream read:input maxLength:kFileBufferSize];
+            next_in = input;
+            if (read_bytes < 0) {
+                *error = inputStream.streamError;
+                break;
+            }
+            available_in = read_bytes;
+        }
+        else if (result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) {
+            NSInteger write_bytes = [outputStream write:output maxLength:kFileBufferSize];
+            if (write_bytes < 0) {
+                *error = outputStream.streamError;
+                break;
+            }
+            available_out = kFileBufferSize;
+            next_out = output;
+        }
+        else {
+            break; /* Error or success. */
+        }
+        result = BrotliDecompressStream(&available_in, &next_in,
+                                        &available_out, &next_out, &total_out, s);
+    }
+    if (next_out != output) {
+        [outputStream write:output maxLength:next_out - output];
+    }
+    
+    if ((result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) || outputStream.streamError) {
+        NSLog(@"[GWLBrotliArchive] failed to write output");
+    } else if (result != BROTLI_RESULT_SUCCESS) { /* Error or needs more input. */
+        NSLog(@"[GWLBrotliArchive] corrupt input");
+    }
+    
+end:
+    free(input);
+    free(output);
+    BrotliDestroyState(s);
+    return (result == BROTLI_RESULT_SUCCESS);
 }
 
 @end
