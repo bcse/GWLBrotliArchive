@@ -7,21 +7,43 @@
 //
 
 #import "ViewController.h"
+#import <GWLBrotliArchive/GWLBrotliArchive.h>
 
-@interface ViewController ()
+@interface ViewController () <GWLBrotliArchiveDelegate>
 
 @end
 
 @implementation ViewController
 
-- (void)viewDidLoad {
+- (void)viewDidLoad
+{
     [super viewDidLoad];
-    // Do any additional setup after loading the view, typically from a nib.
-}
-
-- (void)didReceiveMemoryWarning {
-    [super didReceiveMemoryWarning];
-    // Dispose of any resources that can be recreated.
+    
+    NSString *testdataRoot = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:@"testdata"];
+    NSDirectoryEnumerator<NSString *> *enumerator = [[NSFileManager defaultManager] enumeratorAtPath:testdataRoot];
+    NSPredicate *filter = [NSPredicate predicateWithFormat:@"self ENDSWITH '.compressed'"];
+    NSArray<NSString *> *compressedFiles = [enumerator.allObjects filteredArrayUsingPredicate:filter];
+    
+    NSString *outputPath = [[NSString alloc] initWithFormat:@"%@%@", NSTemporaryDirectory(), @"output"];
+    
+    for (NSString *fileName in compressedFiles) {
+        NSString *filePath = [testdataRoot stringByAppendingPathComponent:fileName];
+        NSString *originalFilePath = [filePath substringToIndex:filePath.length - 11];
+        if (![[NSFileManager defaultManager] fileExistsAtPath:originalFilePath]) {
+            continue;
+        }
+        NSError *err = nil;
+        if ([GWLBrotliArchive decompressFileAtPath:filePath toDestination:outputPath preserveAttributes:YES overwrite:YES password:nil error:&err delegate:self]) {
+            NSData *data1 = [NSData dataWithContentsOfFile:originalFilePath];
+            NSData *data2 = [NSData dataWithContentsOfFile:outputPath];
+            BOOL result = [data1 isEqualToData:data2];
+            NSLog(@"Decompress %@ ... %@", fileName, result ? @"OK" : @"FAIL");
+        }
+        else {
+            NSLog(@"Decompress failed! %@", fileName);
+            NSLog(@"%@", err);
+        }
+    }
 }
 
 @end

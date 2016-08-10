@@ -15,6 +15,7 @@
 		0BBE2C4E1D5ACF1F00D4E711 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = 0BBE2C4C1D5ACF1F00D4E711 /* LaunchScreen.storyboard */; };
 		0BBE2C731D5AD3D600D4E711 /* GWLBrotliArchive.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 0BBE2C631D5AD17700D4E711 /* GWLBrotliArchive.framework */; };
 		0BBE2C741D5AD3D600D4E711 /* GWLBrotliArchive.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 0BBE2C631D5AD17700D4E711 /* GWLBrotliArchive.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		0BBE2C7C1D5ADBF100D4E711 /* testdata in Resources */ = {isa = PBXBuildFile; fileRef = 0BBE2C7B1D5ADBF100D4E711 /* testdata */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -53,6 +54,7 @@
 		0BBE2C4D1D5ACF1F00D4E711 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; name = Base; path = Base.lproj/LaunchScreen.storyboard; sourceTree = "<group>"; };
 		0BBE2C4F1D5ACF1F00D4E711 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		0BBE2C5E1D5AD17700D4E711 /* GWLBrotliArchive.xcodeproj */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.pb-project"; path = GWLBrotliArchive.xcodeproj; sourceTree = "<group>"; };
+		0BBE2C7B1D5ADBF100D4E711 /* testdata */ = {isa = PBXFileReference; lastKnownFileType = folder; name = testdata; path = brotli/tests/testdata; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +97,7 @@
 				0BBE2C4A1D5ACF1F00D4E711 /* Assets.xcassets */,
 				0BBE2C4C1D5ACF1F00D4E711 /* LaunchScreen.storyboard */,
 				0BBE2C4F1D5ACF1F00D4E711 /* Info.plist */,
+				0BBE2C7B1D5ADBF100D4E711 /* testdata */,
 				0BBE2C3E1D5ACF1F00D4E711 /* Supporting Files */,
 			);
 			path = GWLBrotliArchiveDemo;
@@ -192,6 +195,7 @@
 			files = (
 				0BBE2C4E1D5ACF1F00D4E711 /* LaunchScreen.storyboard in Resources */,
 				0BBE2C4B1D5ACF1F00D4E711 /* Assets.xcassets in Resources */,
+				0BBE2C7C1D5ADBF100D4E711 /* testdata in Resources */,
 				0BBE2C491D5ACF1F00D4E711 /* Main.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
