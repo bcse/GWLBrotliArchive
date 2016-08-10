@@ -86,27 +86,40 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
     const uint8_t *next_in;
     size_t available_out = kFileBufferSize;
     uint8_t *next_out;
+    NSError *err = nil;
     
     NSDictionary *fileAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
     unsigned long long fileSize = [fileAttributes[NSFileSize] unsignedLongLongValue];
     unsigned long long currentPosition = 0;
     
     if (!overwrite && [[NSFileManager defaultManager] fileExistsAtPath:destination]) {
-        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutputFileExists userInfo:nil];
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"output file exists"};
+        err = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutputFileExists userInfo:userInfo];
+        *error = err;
+        if (completionHandler) {
+            completionHandler(path, NO, err);
+        }
         return NO;
     }
     
     BrotliResult result = BROTLI_RESULT_ERROR;
     BrotliState *s = BrotliCreateState(NULL, NULL, NULL);
     if (!s) {
-        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:nil];
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"out of memory"};
+        err = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:userInfo];
+        *error = err;
+        if (completionHandler) {
+            completionHandler(path, NO, err);
+        }
         return NO;
     }
     
     input = (uint8_t *)malloc(kFileBufferSize);
     output = (uint8_t *)malloc(kFileBufferSize);
     if (!input || !output) {
-        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:nil];
+        NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"out of memory"};
+        err = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:userInfo];
+        *error = err;
         goto cleanup;
     }
     
@@ -170,10 +183,14 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
         [outputStream close];
     
         if ((result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) || outputStream.streamError) {
-            *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorFailedToWriteOutput userInfo:nil];
+            NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"failed to write output"};
+            err = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorFailedToWriteOutput userInfo:userInfo];
+            *error = err;
         }
         else if (result != BROTLI_RESULT_SUCCESS) { /* Error or needs more input. */
-            *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorCorruptInput userInfo:nil];
+            NSDictionary *userInfo = @{NSLocalizedDescriptionKey: @"corrupt input"};
+            err = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorCorruptInput userInfo:userInfo];
+            *error = err;
         }
         else if (result == BROTLI_RESULT_SUCCESS) {
             // Message delegate
@@ -188,6 +205,10 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
     }
 
 cleanup:
+    if (completionHandler) {
+        completionHandler(path, (result == BROTLI_RESULT_SUCCESS), err);
+    }
+
     free(input);
     free(output);
     BrotliDestroyState(s);

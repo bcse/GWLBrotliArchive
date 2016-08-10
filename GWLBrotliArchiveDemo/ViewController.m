@@ -33,7 +33,15 @@
             continue;
         }
         NSError *err = nil;
-        if ([GWLBrotliArchive decompressFileAtPath:filePath toDestination:outputPath preserveAttributes:YES overwrite:YES password:nil error:&err delegate:self]) {
+        
+        //BOOL success = [GWLBrotliArchive decompressFileAtPath:filePath toDestination:outputPath preserveAttributes:YES overwrite:YES password:nil error:&err delegate:self];
+        BOOL success = [GWLBrotliArchive decompressFileAtPath:filePath toDestination:outputPath overwrite:YES password:nil progressHandler:^(NSString * _Nonnull entry, long entryNumber, long total) {
+            
+        } completionHandler:^(NSString * _Nonnull path, BOOL succeeded, NSError * _Nullable error) {
+            NSLog(@"completionHandler %@ %@ %@", path, @(succeeded), error);
+        }];
+        
+        if (success) {
             NSData *data1 = [NSData dataWithContentsOfFile:originalFilePath];
             NSData *data2 = [NSData dataWithContentsOfFile:outputPath];
             BOOL result = [data1 isEqualToData:data2];
