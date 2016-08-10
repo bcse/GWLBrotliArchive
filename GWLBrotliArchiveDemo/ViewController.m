@@ -46,4 +46,22 @@
     }
 }
 
+#pragma mark GWLBrotliArchiveDelegate
+
+- (void)brotliArchiveWillDecompressArchiveAtPath:(NSString *)path
+{
+    NSLog(@"brotliArchiveWillDecompressArchiveAtPath: %@", path);
+}
+
+- (void)brotliArchiveDidDecompressArchiveAtPath:(NSString *)path decompressedPath:(NSString *)decompressedPath
+{
+    NSLog(@"brotliArchiveDidDecompressArchiveAtPath: %@ decompressedPath: %@", path, decompressedPath);
+}
+
+- (void)brotliArchiveProgressEvent:(unsigned long long)loaded total:(unsigned long long)total
+{
+    NSLog(@"brotliArchiveProgressEvent:%llu total:%llu (%.02f%%)", loaded, total, (float)loaded/total * 100);
+}
+
+
 @end

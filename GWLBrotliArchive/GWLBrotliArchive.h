@@ -19,17 +19,12 @@ FOUNDATION_EXPORT const unsigned char GWLBrotliArchiveVersionString[];
 
 NS_ASSUME_NONNULL_BEGIN
 
-struct brotli_file_info {
-    
-};
-typedef struct brotli_file_info brotli_file_info;
-
 typedef enum : NSUInteger {
     GWLBrotliArchiveErrorNone,
     GWLBrotliArchiveErrorOutOfMemory,
     GWLBrotliArchiveErrorCorruptInput,
     GWLBrotliArchiveErrorFailedToWriteOutput,
-    GWLBrotliArchiveErrorDestinationAlreadyExists,
+    GWLBrotliArchiveErrorOutputFileExists,
 } GWLBrotliArchiveError;
 
 @protocol GWLBrotliArchiveDelegate;
@@ -56,14 +51,14 @@ typedef enum : NSUInteger {
 
 + (BOOL)decompressFileAtPath:(NSString *)path
                toDestination:(NSString *)destination
-             progressHandler:(void (^)(NSString *entry, brotli_file_info fileInfo, long entryNumber, long total))progressHandler
+             progressHandler:(void (^)(NSString *entry, long entryNumber, long total))progressHandler
            completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler;
 
 + (BOOL)decompressFileAtPath:(NSString *)path
                toDestination:(NSString *)destination
                    overwrite:(BOOL)overwrite
                     password:(nullable NSString *)password
-             progressHandler:(void (^)(NSString *entry, brotli_file_info fileInfo, long entryNumber, long total))progressHandler
+             progressHandler:(void (^)(NSString *entry, long entryNumber, long total))progressHandler
            completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler;
 
 @end
@@ -72,16 +67,15 @@ typedef enum : NSUInteger {
 
 @optional
 
-- (void)brotliArchiveWillDecompressArchiveAtPath:(NSString *)path fileInfo:(brotli_file_info)fileInfo;
-- (void)brotliArchiveDidDecompressArchiveAtPath:(NSString *)path fileInfo:(brotli_file_info)fileInfo decompressedPath:(NSString *)decompressedPath;
+- (void)brotliArchiveWillDecompressArchiveAtPath:(NSString *)path;
+- (void)brotliArchiveDidDecompressArchiveAtPath:(NSString *)path decompressedPath:(NSString *)decompressedPath;
 
-- (BOOL)brotliArchiveShouldDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath fileInfo:(brotli_file_info)fileInfo;
-- (void)brotliArchiveWillDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath fileInfo:(brotli_file_info)fileInfo;
-- (void)brotliArchiveDidDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath fileInfo:(brotli_file_info)fileInfo;
-- (void)brotliArchiveDidDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath decompressedFilePath:(NSString *)decompressedFilePath;
+//- (BOOL)brotliArchiveShouldDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath fileInfo:(brotli_file_info)fileInfo;
+//- (void)brotliArchiveWillDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath fileInfo:(brotli_file_info)fileInfo;
+//- (void)brotliArchiveDidDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath fileInfo:(brotli_file_info)fileInfo;
+//- (void)brotliArchiveDidDecompressFileAtIndex:(NSInteger)fileIndex totalFiles:(NSInteger)totalFiles archivePath:(NSString *)archivePath decompressedFilePath:(NSString *)decompressedFilePath;
 
 - (void)brotliArchiveProgressEvent:(unsigned long long)loaded total:(unsigned long long)total;
-- (void)brotliArchiveDidDecompressArchiveFile:(NSString *)brotliFile entryPath:(NSString *)entryPath destPath:(NSString *)destPath;
 
 @end
 

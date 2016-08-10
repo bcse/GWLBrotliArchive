@@ -44,7 +44,7 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
                toDestination:(NSString *)destination
                    overwrite:(BOOL)overwrite
                     password:(NSString *)password
-             progressHandler:(void (^)(NSString *entry, brotli_file_info fileInfo, long entryNumber, long total))progressHandler
+             progressHandler:(void (^)(NSString *entry, long entryNumber, long total))progressHandler
            completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
 {
     return [self decompressFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:overwrite password:password error:nil delegate:nil progressHandler:progressHandler completionHandler:completionHandler];
@@ -52,7 +52,7 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
 
 + (BOOL)decompressFileAtPath:(NSString *)path
                toDestination:(NSString *)destination
-             progressHandler:(void (^)(NSString *entry, brotli_file_info fileInfo, long entryNumber, long total))progressHandler
+             progressHandler:(void (^)(NSString *entry, long entryNumber, long total))progressHandler
            completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
 {
     return [self decompressFileAtPath:path toDestination:destination preserveAttributes:YES overwrite:YES password:nil error:nil delegate:nil progressHandler:progressHandler completionHandler:completionHandler];
@@ -76,7 +76,7 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
                     password:(NSString *)password
                        error:(NSError * _Nullable *)error
                     delegate:(id<GWLBrotliArchiveDelegate>)delegate
-             progressHandler:(void (^)(NSString *entry, brotli_file_info fileInfo, long entryNumber, long total))progressHandler
+             progressHandler:(void (^)(NSString *entry, long entryNumber, long total))progressHandler
            completionHandler:(void (^)(NSString *path, BOOL succeeded, NSError * _Nullable error))completionHandler
 {
     uint8_t *input;
@@ -87,8 +87,12 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
     size_t available_out = kFileBufferSize;
     uint8_t *next_out;
     
+    NSDictionary *fileAttributes = [[NSFileManager defaultManager] attributesOfItemAtPath:path error:nil];
+    unsigned long long fileSize = [fileAttributes[NSFileSize] unsignedLongLongValue];
+    unsigned long long currentPosition = 0;
+    
     if (!overwrite && [[NSFileManager defaultManager] fileExistsAtPath:destination]) {
-        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorDestinationAlreadyExists userInfo:nil];
+        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutputFileExists userInfo:nil];
         return NO;
     }
     
@@ -104,6 +108,14 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
     if (!input || !output) {
         *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:nil];
         goto cleanup;
+    }
+    
+    // Message delegate
+    if ([delegate respondsToSelector:@selector(brotliArchiveWillDecompressArchiveAtPath:)]) {
+        [delegate brotliArchiveWillDecompressArchiveAtPath:path];
+    }
+    if ([delegate respondsToSelector:@selector(brotliArchiveProgressEvent:total:)]) {
+        [delegate brotliArchiveProgressEvent:currentPosition total:fileSize];
     }
     
     {
@@ -127,6 +139,13 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
                     break;
                 }
                 available_in = read_bytes;
+
+                currentPosition += read_bytes;
+                
+                // Message delegate
+                if ([delegate respondsToSelector:@selector(brotliArchiveProgressEvent:total:)]) {
+                    [delegate brotliArchiveProgressEvent:currentPosition total:fileSize];
+                }
             }
             else if (result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) {
                 NSInteger write_bytes = [outputStream write:output maxLength:kFileBufferSize];
@@ -155,6 +174,16 @@ static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
         }
         else if (result != BROTLI_RESULT_SUCCESS) { /* Error or needs more input. */
             *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorCorruptInput userInfo:nil];
+        }
+        else if (result == BROTLI_RESULT_SUCCESS) {
+            // Message delegate
+            if ([delegate respondsToSelector:@selector(brotliArchiveDidDecompressArchiveAtPath:decompressedPath:)]) {
+                [delegate brotliArchiveDidDecompressArchiveAtPath:path decompressedPath:destination];
+            }
+            // final progress event = 100%
+            if ([delegate respondsToSelector:@selector(brotliArchiveProgressEvent:total:)]) {
+                [delegate brotliArchiveProgressEvent:currentPosition total:fileSize];
+            }
         }
     }
 
