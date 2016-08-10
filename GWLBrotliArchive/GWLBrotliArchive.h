@@ -24,6 +24,14 @@ struct brotli_file_info {
 };
 typedef struct brotli_file_info brotli_file_info;
 
+typedef enum : NSUInteger {
+    GWLBrotliArchiveErrorNone,
+    GWLBrotliArchiveErrorOutOfMemory,
+    GWLBrotliArchiveErrorCorruptInput,
+    GWLBrotliArchiveErrorFailedToWriteOutput,
+    GWLBrotliArchiveErrorDestinationAlreadyExists,
+} GWLBrotliArchiveError;
+
 @protocol GWLBrotliArchiveDelegate;
 
 @interface GWLBrotliArchive : NSObject

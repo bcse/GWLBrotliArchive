@@ -8,10 +8,10 @@
 
 #import <Foundation/Foundation.h>
 #import "GWLBrotliArchive.h"
-#include <sys/stat.h>
 #import "decode.h"
 
 static const size_t kFileBufferSize = 65536;
+static NSString * const kGWLBrotliArchiveErrorDomain = @"GWLBrotliArchiveError";
 
 @implementation GWLBrotliArchive
 
@@ -86,65 +86,79 @@ static const size_t kFileBufferSize = 65536;
     const uint8_t *next_in;
     size_t available_out = kFileBufferSize;
     uint8_t *next_out;
-
-    NSInputStream *inputStream = [NSInputStream inputStreamWithFileAtPath:path];
-    NSOutputStream *outputStream = [NSOutputStream outputStreamToFileAtPath:destination append:NO];
+    
+    if (!overwrite && [[NSFileManager defaultManager] fileExistsAtPath:destination]) {
+        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorDestinationAlreadyExists userInfo:nil];
+        return NO;
+    }
     
     BrotliResult result = BROTLI_RESULT_ERROR;
     BrotliState *s = BrotliCreateState(NULL, NULL, NULL);
     if (!s) {
-        NSLog(@"[GWLBrotliArchive] out of memory");
+        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:nil];
         return NO;
     }
     
     input = (uint8_t *)malloc(kFileBufferSize);
     output = (uint8_t *)malloc(kFileBufferSize);
     if (!input || !output) {
-        NSLog(@"[GWLBrotliArchive] out of memory");
-        goto end;
+        *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorOutOfMemory userInfo:nil];
+        goto cleanup;
     }
     
-    next_out = output;
-    result = BROTLI_RESULT_NEEDS_MORE_INPUT;
-    while (YES) {
-        if (result == BROTLI_RESULT_NEEDS_MORE_INPUT) {
-            if (available_in == 0) {
-                break;
+    {
+        NSInputStream *inputStream = [NSInputStream inputStreamWithFileAtPath:path];
+        NSOutputStream *outputStream = [NSOutputStream outputStreamToFileAtPath:destination append:NO];
+        
+        [inputStream open];
+        [outputStream open];
+        
+        next_out = output;
+        result = BROTLI_RESULT_NEEDS_MORE_INPUT;
+        while (YES) {
+            if (result == BROTLI_RESULT_NEEDS_MORE_INPUT) {
+                if (!inputStream.hasBytesAvailable) {
+                    break;
+                }
+                NSInteger read_bytes = [inputStream read:input maxLength:kFileBufferSize];
+                next_in = input;
+                if (read_bytes < 0) {
+                    *error = inputStream.streamError;
+                    break;
+                }
+                available_in = read_bytes;
             }
-            NSInteger read_bytes = [inputStream read:input maxLength:kFileBufferSize];
-            next_in = input;
-            if (read_bytes < 0) {
-                *error = inputStream.streamError;
-                break;
+            else if (result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) {
+                NSInteger write_bytes = [outputStream write:output maxLength:kFileBufferSize];
+                if (write_bytes < 0) {
+                    *error = outputStream.streamError;
+                    break;
+                }
+                available_out = kFileBufferSize;
+                next_out = output;
             }
-            available_in = read_bytes;
-        }
-        else if (result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) {
-            NSInteger write_bytes = [outputStream write:output maxLength:kFileBufferSize];
-            if (write_bytes < 0) {
-                *error = outputStream.streamError;
-                break;
+            else {
+                break; /* Error or success. */
             }
-            available_out = kFileBufferSize;
-            next_out = output;
+            result = BrotliDecompressStream(&available_in, &next_in,
+                                            &available_out, &next_out, &total_out, s);
         }
-        else {
-            break; /* Error or success. */
+        if (next_out != output) {
+            [outputStream write:output maxLength:next_out - output];
         }
-        result = BrotliDecompressStream(&available_in, &next_in,
-                                        &available_out, &next_out, &total_out, s);
-    }
-    if (next_out != output) {
-        [outputStream write:output maxLength:next_out - output];
-    }
+        
+        [inputStream close];
+        [outputStream close];
     
-    if ((result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) || outputStream.streamError) {
-        NSLog(@"[GWLBrotliArchive] failed to write output");
-    } else if (result != BROTLI_RESULT_SUCCESS) { /* Error or needs more input. */
-        NSLog(@"[GWLBrotliArchive] corrupt input");
+        if ((result == BROTLI_RESULT_NEEDS_MORE_OUTPUT) || outputStream.streamError) {
+            *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorFailedToWriteOutput userInfo:nil];
+        }
+        else if (result != BROTLI_RESULT_SUCCESS) { /* Error or needs more input. */
+            *error = [NSError errorWithDomain:kGWLBrotliArchiveErrorDomain code:GWLBrotliArchiveErrorCorruptInput userInfo:nil];
+        }
     }
-    
-end:
+
+cleanup:
     free(input);
     free(output);
     BrotliDestroyState(s);
