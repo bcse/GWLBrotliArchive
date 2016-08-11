@@ -1,0 +1,11 @@
+use_frameworks!
+
+target 'GWLBrotliArchive_Example' do
+  pod 'GWLBrotliArchive', :path => '../'
+
+  target 'GWLBrotliArchive_Tests' do
+    inherit! :search_paths
+
+    
+  end
+end

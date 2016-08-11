@@ -1,19 +1,19 @@
 //
-//  ViewController.m
-//  GWLBrotliArchiveDemo
+//  GWLViewController.m
+//  GWLBrotliArchive
 //
-//  Created by Grey Lee on 2016/8/10.
-//  Copyright © 2016年 Grey Lee. All rights reserved.
+//  Created by Grey Lee on 08/11/2016.
+//  Copyright (c) 2016 Grey Lee. All rights reserved.
 //
 
-#import "ViewController.h"
+#import "GWLViewController.h"
 #import <GWLBrotliArchive/GWLBrotliArchive.h>
 
-@interface ViewController () <GWLBrotliArchiveDelegate>
+@interface GWLViewController () <GWLBrotliArchiveDelegate>
 
 @end
 
-@implementation ViewController
+@implementation GWLViewController
 
 - (void)viewDidLoad
 {
@@ -70,6 +70,5 @@
 {
     NSLog(@"brotliArchiveProgressEvent:%llu total:%llu (%.02f%%)", loaded, total, (float)loaded/total * 100);
 }
-
 
 @end

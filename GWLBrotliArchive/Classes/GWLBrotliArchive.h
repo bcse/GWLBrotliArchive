@@ -11,12 +11,6 @@
 
 #import <UIKit/UIKit.h>
 
-//! Project version number for GWLBrotliArchive.
-FOUNDATION_EXPORT double GWLBrotliArchiveVersionNumber;
-
-//! Project version string for GWLBrotliArchive.
-FOUNDATION_EXPORT const unsigned char GWLBrotliArchiveVersionString[];
-
 NS_ASSUME_NONNULL_BEGIN
 
 typedef enum : NSUInteger {
